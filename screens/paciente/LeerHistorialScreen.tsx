@@ -30,12 +30,12 @@ export default function LeerHistorialScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.date}>📅 Fecha: {item.fecha}</Text>
-            <Text style={styles.description}>🧍 Paciente: {item.nombreApellidoPaciente}</Text>
-            <Text style={styles.description}>👨‍⚕️ Doctor: {item.nombreApellidoDoctor}</Text>
-            <Text style={styles.description}>🏥 Ubicación: {item.ubicacion}</Text>
-            <Text style={styles.description}>📝 Motivo: {item.motivo}</Text>
-            <Text style={styles.description}>📌 Estado: {item.estado}</Text>
+            <Text style={styles.date}>Fecha: {item.fecha}</Text>
+            <Text style={styles.description}>Paciente: {item.nombreApellidoPaciente}</Text>
+            <Text style={styles.description}>Doctor: {item.nombreApellidoDoctor}</Text>
+            <Text style={styles.description}>Ubicación: {item.ubicacion}</Text>
+            <Text style={styles.description}>Motivo: {item.motivo}</Text>
+            <Text style={styles.description}>Estado: {item.estado}</Text>
           </View>
         )}
       />

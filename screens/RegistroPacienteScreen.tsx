@@ -38,7 +38,7 @@ export default function RegistroPacienteScreen({ navigation }: any) {
           value={usuario}
           onChangeText={setUsuario}
           style={styles.inputText}
-          placeholder="Tu nombre de usuario"
+          placeholder="Nombre de usuario"
           placeholderTextColor="#aaa"
         />
       </View>

@@ -62,7 +62,7 @@ export default function GuardarCitaScreen() {
           value={idCita}
           onChangeText={setidCita}
           style={styles.inputText}
-          placeholder="ID único"
+          placeholder="ID"
           placeholderTextColor="#aaa"
           keyboardType="numeric"
         />
@@ -263,7 +263,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#B6E2DD',
     paddingHorizontal: 14,
-    paddingVertical: 12,
     marginBottom: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
