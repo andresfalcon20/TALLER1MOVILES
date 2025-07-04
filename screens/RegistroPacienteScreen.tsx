@@ -10,11 +10,11 @@ export default function RegistroPacienteScreen({ navigation }: any) {
 
   const handleRegistro = () => {
     if (usuario === '' || email === '' || password === '' || confirmarPassword === '') {
-      Alert.alert('Error', 'Todos los campos son obligatorios');
+      Alert.alert('Todos los campos son obligatorios');
     } else if (password !== confirmarPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      Alert.alert('Las contraseñas no coinciden');
     } else {
-      Alert.alert('Éxito', 'Usuario registrado');
+      Alert.alert('Usuario registrado');
       navigation.navigate('login');
     }
   };

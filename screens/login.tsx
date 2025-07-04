@@ -10,7 +10,7 @@ export default function LoginScreen({ navigation }: any) {
     if (email !== '' && password !== '') {
       navigation.navigate('PacienteScreen');
     } else {
-      Alert.alert('Error', 'Ingresa un email y contraseña de prueba');
+      Alert.alert('Ingresa un email y contraseña ');
     }
   };
 
