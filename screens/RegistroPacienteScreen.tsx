@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Alert,
-  StyleSheet,
-} from 'react-native';
+import {View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function RegistroPacienteScreen({ navigation }: any) {
