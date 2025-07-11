@@ -1,39 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { supabase } from '../../supabase/Config';
+import { auth, db } from '../../firebase/Config2';
+import { onValue, ref } from 'firebase/database';
 
 export default function LeerHistorialScreen() {
   const [historial, setHistorial] = useState<any[]>([]);
 
   useEffect(() => {
-    async function cargarDatos() {
-      const { data, error } = await supabase
-        .from('citaMedica')
-        .select('*')
-        .order('fecha', { ascending: false });
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        const uid = user.uid;
 
-      if (error) {
-        console.error('Error:', error.message);
+        const citasRef = ref(db, 'citas_medicas');
+
+        onValue(citasRef, snapshot => {
+          const data = snapshot.val();
+          if (data) {
+            const citasArray = Object.values(data);
+            const citasFiltradas = citasArray.filter((cita: any) => cita.idPaciente === uid);
+            setHistorial(citasFiltradas);
+          } else {
+            setHistorial([]);
+          }
+        });
       } else {
-        setHistorial(data);
+        setHistorial([]);
       }
-    }
+    });
 
-    cargarDatos();
+    return () => unsubscribe();
   }, []);
+
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Historial de Citas</Text>
       <FlatList
         data={historial}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.date}>Fecha: {item.fecha}</Text>
             <Text style={styles.description}>Paciente: {item.nombreApellidoPaciente}</Text>
             <Text style={styles.description}>Doctor: {item.nombreApellidoDoctor}</Text>
-            <Text style={styles.description}>Ubicación: {item.ubicacion}</Text>
+            <Text style={styles.description}>Ubicación: {item.ubicacionCita}</Text>
             <Text style={styles.description}>Motivo: {item.motivo}</Text>
             <Text style={styles.description}>Estado: {item.estado}</Text>
           </View>
@@ -42,6 +53,7 @@ export default function LeerHistorialScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

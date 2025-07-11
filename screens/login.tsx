@@ -1,16 +1,39 @@
 import React, { useState } from 'react';
-import {View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Image} from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; 
+import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { auth } from '../firebase/Config2';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    if (email !== '' && password !== '') {
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Por favor ingresa correo y contraseña.');
+      return;
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       navigation.navigate('PacienteScreen');
-    } else {
-      Alert.alert('Ingresa un email y contraseña ');
+    } catch (error: any) {
+      let mensaje = 'Error al iniciar sesión.';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          mensaje = 'Correo electrónico no válido.';
+          break;
+        case 'auth/user-disabled':
+          mensaje = 'Esta cuenta ha sido deshabilitada.';
+          break;
+        case 'auth/user-not-found':
+          mensaje = 'No existe un usuario con este correo.';
+          break;
+        case 'auth/wrong-password':
+          mensaje = 'Contraseña incorrecta.';
+          break;
+      }
+      Alert.alert('Error de autenticación', mensaje);
     }
   };
 
@@ -19,19 +42,18 @@ export default function LoginScreen({ navigation }: any) {
       <Text style={styles.titulo}>BIENVENIDO</Text>
       <Text style={styles.subtitulo}>medicPLus</Text>
 
-      <Image
-  source={require('../assets/paciente.jpg')} 
-  style={styles.image}
-/>
+      <Image source={require('../assets/paciente.jpg')} style={styles.image} />
 
       <Text style={styles.label}>Email</Text>
       <View style={styles.inputContenedor}>
         <Ionicons name="mail" size={20} color="#888" />
         <TextInput
           style={styles.inputTexto}
-          placeholderTextColor="#aaa"
+          placeholder='Ingrese su email'
           onChangeText={setEmail}
+          value={email}
           keyboardType="email-address"
+          autoCorrect={false}
         />
       </View>
 
@@ -39,16 +61,19 @@ export default function LoginScreen({ navigation }: any) {
       <View style={styles.inputContenedor}>
         <Ionicons name="lock-closed" size={20} color="#888" />
         <TextInput
+          placeholder='Ingrese su contraseña'
           style={styles.inputTexto}
-          placeholderTextColor="#aaa"
           secureTextEntry
           onChangeText={setPassword}
+          value={password}
+          autoCorrect={false}
         />
       </View>
 
-      <View style={styles.Boton}>
-        <Button title="Iniciar sesión" color="#2B7A78" onPress={handleLogin} />
-      </View>
+      {/* Botón para iniciar sesión */}
+      <TouchableOpacity style={styles.boton} onPress={handleLogin}>
+        <Text style={styles.textoBoton}>Iniciar Sesión</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.ContainerL}
@@ -75,14 +100,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   subtitulo: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#4CAEA9',
-  textAlign: 'center',
-  marginBottom: 16,
-  textTransform: 'uppercase',
-},
-
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAEA9',
+    textAlign: 'center',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -110,10 +134,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  Boton: {
-    marginBottom: 16,
+  boton: {
+    backgroundColor: '#3AAFA9',
+    paddingVertical: 14,
     borderRadius: 10,
-    overflow: 'hidden',
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  textoBoton: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   ContainerL: {
     alignItems: 'center',
@@ -125,11 +156,10 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   image: {
-  width: 120,
-  height: 120,
-  alignSelf: 'center',
-  marginBottom: 24,
-  borderRadius: 40, 
-},
-
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
+    marginBottom: 24,
+    borderRadius: 40,
+  },
 });
