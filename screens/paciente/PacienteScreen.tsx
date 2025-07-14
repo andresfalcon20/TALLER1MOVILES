@@ -35,14 +35,14 @@ export default function PacienteScreen({ navigation }: any) {
     }
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      navigation.replace('Login'); // Asegúrate de tener la pantalla 'Login' en tu stack
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo cerrar sesión.');
-    }
-  };
+const handleLogout = async () => {
+  try {
+    await auth.signOut();
+    navigation.replace('Login');  
+  } catch (error) {
+    Alert.alert('Error', 'No se pudo cerrar sesión.');
+  }
+};
 
   return (
     <View style={styles.container}>

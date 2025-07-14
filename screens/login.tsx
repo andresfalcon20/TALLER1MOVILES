@@ -70,14 +70,13 @@ export default function LoginScreen({ navigation }: any) {
         />
       </View>
 
-      {/* Botón para iniciar sesión */}
       <TouchableOpacity style={styles.boton} onPress={handleLogin}>
         <Text style={styles.textoBoton}>Iniciar Sesión</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.ContainerL}
-        onPress={() => navigation.navigate('RegistroPacienteScreen')}
+        onPress={() => navigation.navigate('Registro paciente')}
       >
         <Text style={styles.TextL}>¿No tienes cuenta? Regístrate</Text>
       </TouchableOpacity>

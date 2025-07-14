@@ -66,6 +66,7 @@ const styles = StyleSheet.create({
     color: '#2B7A78',
     marginBottom: 20,
     textAlign: 'center',
+    marginTop: 50
   },
   card: {
     backgroundColor: '#FFFFFF',

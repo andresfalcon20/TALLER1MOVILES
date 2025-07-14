@@ -1,15 +1,17 @@
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
+import * as ImagePicker from 'expo-image-picker';
 
 import { Picker } from '@react-native-picker/picker'
 import { supabase } from '../../supabase/Config'
 import { ref, set } from 'firebase/database'
 import { db } from '../../firebase/Config2'
-import { auth } from '../../firebase/Config2'  // Importa Firebase Auth
+import { auth } from '../../firebase/Config2'
+
 
 export default function GuardarCitaMedica() {
 
-  const [idPaciente, setIdPaciente] = useState('')  // Guarda el id del paciente autenticado
+  const [idPaciente, setIdPaciente] = useState('')
 
   const [nombreApellidoPaciente, setNombreApellidoPaciente] = useState('')
   const [cedula, setCedula] = useState('')
@@ -26,23 +28,73 @@ export default function GuardarCitaMedica() {
   const [listaEspecialidades, setListaEspecialidades] = useState<any[]>([])
   const [listaDoctores, setListaDoctores] = useState<any[]>([])
 
-  const [especialidadRequerida, setEspecialidadRequerida] = useState('')
+  const [especialidad_id, setEspecialidadRequerida] = useState('')
   const [idDoctorSeleccionado, setIdDoctorSeleccionado] = useState('')
+  const [image, setImage] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  async function subir() {
+    const avatarFile = image!
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('citas')
+      .upload('public/avatar1.png', {
+        uri: image,
+        cacheControl: '3600',
+        upsert: false
+      } as any, {
+        contentType: 'image/jpeg'
+      });
+
+    if (fileError) {
+      Alert.alert('Error al subir imagen', fileError.message);
+      return;
+    }
+
+  }
+  useEffect(() => {
+    if (especialidad_id) {
+      cargarDoctoresPorEspecialidad(especialidad_id);
+    } else {
+      setListaDoctores([]);
+    }
+  }, [especialidad_id]);
+
+  async function cargarDoctoresPorEspecialidad(idEspecialidad: string) {
+    const { data, error } = await supabase
+      .from('doctor')
+      .select('id, nombreApellido')
+      .eq('especialidad_id', idEspecialidad);
+
+    if (error) {
+      Alert.alert('Error al filtrar doctores', error.message);
+      return;
+    }
+
+    setListaDoctores(data || []);
+  }
 
   useEffect(() => {
-    // Listener para autenticación Firebase
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
         setIdPaciente(user.uid)
-        console.log('Usuario Firebase autenticado:', user)
       } else {
         setIdPaciente('')
-        console.log('No hay usuario autenticado en Firebase')
       }
     })
 
     cargarEspecialidades()
-    cargarDoctores()
 
     return () => unsubscribe()
   }, [])
@@ -59,30 +111,30 @@ export default function GuardarCitaMedica() {
     }
   }
 
-  async function cargarDoctores() {
-    const { data, error } = await supabase
-      .from('doctor')
-      .select('*')  // trae todo
-    //.order('nombreApellido', { ascending: true }) // comentado para prueba
-
-    console.log('Doctores data:', data)
-    console.log('Doctores error:', error)
-
-    if (error) {
-      Alert.alert('Error al cargar doctores', error.message)
-    } else if (!data || data.length === 0) {
-      Alert.alert('Aviso', 'No se encontraron doctores en la base de datos.')
-      setListaDoctores([])
-    } else {
-      setListaDoctores(data)
-    }
-  }
-
   const guardarCita = async () => {
-    if (!nombreApellidoPaciente.trim() || !cedula.trim() || !especialidadRequerida || !idDoctorSeleccionado) {
-      Alert.alert('Campos requeridos', 'Complete nombre, cédula, especialidad y doctor.');
-      return;
+    if (!nombreApellidoPaciente.trim() || !cedula.trim() || !especialidad_id || !idDoctorSeleccionado) {
+      Alert.alert('Campos requeridos', 'Complete nombre, cédula, especialidad y doctor.')
+      return
     }
+
+    if (!idPaciente) {
+      Alert.alert('Error', 'Usuario no autenticado en Firebase.')
+      return
+    }
+
+    // 1. Obtener nombre del doctor
+    const { data: doctorData, error: doctorError } = await supabase
+      .from('doctor')
+      .select('nombreApellido')
+      .eq('id', idDoctorSeleccionado)
+      .single();
+
+    if (doctorError || !doctorData) {
+      Alert.alert('Error', 'No se pudo obtener el nombre del doctor.')
+      return
+    }
+
+    const nombreApellidoDoctor = doctorData.nombreApellido;
 
     const datosCita = {
       nombreApellidoPaciente,
@@ -92,42 +144,45 @@ export default function GuardarCitaMedica() {
       telefono,
       tipoSangre,
       direccion,
-      especialidadRequerida,
+      especialidad_id,
       motivo,
-      nombreApellidoDoctor: idDoctorSeleccionado,
+      doctor_id: idDoctorSeleccionado,
       estado: "PENDIENTE",
       fecha,
       ubicacionCita,
-    };
+    }
 
     try {
-      // Guardar en Supabase
+      // 2. Insertar en Supabase
       const { data, error } = await supabase.from('citaMedica').insert([datosCita]).select();
       if (error) {
+        console.error('Error Supabase:', error.message);
         Alert.alert('Error en Supabase', error.message);
         return;
       }
 
-      const idGenerado = data[0].id;
+      const idGenerado = data?.[0]?.id;
+      if (!idGenerado) {
+        Alert.alert('Error', 'No se pudo obtener el ID de la cita.')
+        return
+      }
 
-      // Guardar en Firebase incluyendo idPaciente
-      const citaRef = ref(db, `citas_medicas/${idGenerado}`);
+      // 3. Insertar en Firebase
+      const citaRef = ref(db, `citas_medicas/${idGenerado}`)
       await set(citaRef, {
         ...datosCita,
         id: idGenerado,
-        idPaciente,
-      });
+        idPaciente: idPaciente,
+        nombreApellidoDoctor, // ahora también guardamos el nombre
+      })
 
-      Alert.alert('Éxito', 'Cita médica registrada en ambas bases de datos.');
-
-      limpiarCampos();
-
+      Alert.alert('Éxito', 'Cita médica registrada en ambas bases de datos.')
+      limpiarCampos()
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Ocurrió un problema al guardar la cita.');
+      console.error('Error general:', err)
+      Alert.alert('Error', 'Ocurrió un problema al guardar la cita.')
     }
-  };
-
+  }
 
   function limpiarCampos() {
     setNombreApellidoPaciente('')
@@ -163,6 +218,7 @@ export default function GuardarCitaMedica() {
           style={styles.input}
           placeholder="Cédula"
           value={cedula}
+          keyboardType='numeric'
           onChangeText={setCedula}
         />
 
@@ -170,6 +226,7 @@ export default function GuardarCitaMedica() {
         <TextInput
           style={styles.input}
           placeholder="Edad"
+          keyboardType='numeric'
           value={edad}
           onChangeText={setEdad}
         />
@@ -178,6 +235,7 @@ export default function GuardarCitaMedica() {
         <TextInput
           style={styles.input}
           placeholder="Correo electrónico"
+          keyboardType='email-address'
           value={correoElectronico}
           onChangeText={setCorreoElectronico}
         />
@@ -186,6 +244,7 @@ export default function GuardarCitaMedica() {
         <TextInput
           style={styles.input}
           placeholder="Teléfono"
+          keyboardType='number-pad'
           value={telefono}
           onChangeText={setTelefono}
         />
@@ -209,13 +268,13 @@ export default function GuardarCitaMedica() {
         <Text style={styles.label}>Seleccione Especialidad</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={especialidadRequerida}
+            selectedValue={especialidad_id}
             onValueChange={(value) => setEspecialidadRequerida(value)}
             itemStyle={{ fontSize: 16 }}
           >
             <Picker.Item label="Seleccione una especialidad" value="" />
             {listaEspecialidades.map((item) => (
-              <Picker.Item key={item.id} label={item.nombre_especialidad} value={item.nombre_especialidad} />
+              <Picker.Item key={item.id} label={item.nombre_especialidad} value={item.id} />
             ))}
           </Picker>
         </View>
@@ -258,6 +317,27 @@ export default function GuardarCitaMedica() {
           onChangeText={setUbicacionCita}
         />
 
+        <TouchableOpacity style={styles.boton} onPress={pickImage}>
+          <View style={styles.btn}>
+            <Text style={styles.btnText}>Seleccionar Imagen (Rayos X, etc.)</Text>
+          </View>
+        </TouchableOpacity>
+
+        {image && (
+          <Image source={{ uri: image }} style={{ width: 200, height: 200, marginBottom: 20, alignSelf: 'center' }} />
+        )}
+     
+<TouchableOpacity
+  style={[styles.boton1, image == null && styles.botonDisabled]}
+  onPress={subir}
+  disabled={image == null}
+>
+  <View >
+    <Text style={styles.btnText}>Subir Imagen</Text>
+  </View>
+</TouchableOpacity>
+
+
         <TouchableOpacity style={styles.boton} onPress={guardarCita}>
           <View style={styles.btn}>
             <Text style={styles.btnText}>Guardar Cita</Text>
@@ -280,6 +360,7 @@ const styles = StyleSheet.create({
     color: '#2B7A78',
     textAlign: 'center',
     marginBottom: 24,
+    marginTop: 40
   },
   input: {
     backgroundColor: '#FFFFFF',
@@ -326,4 +407,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  botonDisabled: {
+  opacity: 0.5,
+},
+boton1:{
+  backgroundColor: "hsl(198, 78%, 64%)",
+      paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+      marginBottom: 20,
+
+}
+ 
 })

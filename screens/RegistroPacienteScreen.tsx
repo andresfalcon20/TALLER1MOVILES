@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getDatabase, ref, set } from 'firebase/database';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { ref, set } from 'firebase/database';
 import { auth, db } from '../firebase/Config2';
 
 export default function RegistroPacienteScreen({ navigation }: any) {
@@ -13,7 +13,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
-
 
   const handleRegistro = async () => {
     if (
@@ -33,21 +32,25 @@ export default function RegistroPacienteScreen({ navigation }: any) {
     }
 
     try {
-
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Usuario creado:', userCredential.user);
       const user = userCredential.user;
 
-      await set(ref(db, 'paciente/' + user.uid), {
-        uid: user.uid,
-        nombre: nombre,
-        edad: edad,
-        nombreUsuario: usuario,
-        email: email,
-        fechaRegistro: new Date().toISOString(),
-      });
-
-      Alert.alert('Registro exitoso', 'Usuario creado correctamente');
-      navigation.navigate('login');
+      try {
+        await set(ref(db, 'paciente/' + user.uid), {
+          uid: user.uid,
+          nombre,
+          edad,
+          nombreUsuario: usuario,
+          email,
+          fechaRegistro: new Date().toISOString(),
+        });
+        Alert.alert('Registro exitoso', 'Usuario creado correctamente');
+        navigation.navigate('login');
+      } catch (error) {
+        console.error('Error al guardar datos en BD:', error);
+        Alert.alert('Error', 'No se pudo guardar la información del paciente.');
+      }
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         Alert.alert('Error', 'El correo ya está en uso');
@@ -63,9 +66,7 @@ export default function RegistroPacienteScreen({ navigation }: any) {
   };
 
   return (
-
     <ScrollView>
-
       <View style={styles.container}>
         <Text style={styles.title}>Crear una cuenta</Text>
         <Ionicons name="person-add" size={48} color="#2B7A78" style={styles.icon} />
@@ -150,15 +151,15 @@ export default function RegistroPacienteScreen({ navigation }: any) {
           <Button title="Registrarse" color="#2B7A78" onPress={handleRegistro} />
         </View>
       </View>
-
     </ScrollView>
-
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: "100%",
+    height: "100%",
     backgroundColor: '#DFF6F4',
     padding: 24,
     justifyContent: 'center',
@@ -205,5 +206,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 10,
     overflow: 'hidden',
+    marginBottom: 40,
   },
 });
