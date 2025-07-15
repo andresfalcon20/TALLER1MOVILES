@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView } from 'react-native';
+import {Alert, Button, Image, ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
+import * as ImagePicker from 'expo-image-picker';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { auth, db } from '../firebase/Config2';
+import { supabase } from '../supabase/Config';
 
 export default function RegistroPacienteScreen({ navigation }: any) {
   const [nombre, setNombre] = useState('');
@@ -13,19 +14,82 @@ export default function RegistroPacienteScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
+  const [imagen, setImagen] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+
+    const pickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images', 'videos'],
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 1,
+        });
+
+        console.log(result);
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
+    };
+
+    const takePhoto = async () => {
+        let result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images', 'videos'],
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 1,
+        });
+        console.log(result);
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
+    };
+
+
+    //SUBIR IMAAGEN
+    async function subirImagenStorage(): Promise<string | null> {
+        if (!image) return null;
+        const nombreArchivo =`fotoperfil_${Date.now()}.png`;
+
+        const { data, error } = await supabase
+            .storage
+            .from('doctorstatic')
+            .upload(`public/${nombreArchivo}`, {
+                uri: image,
+                cacheControl: '3600',
+                upsert: false,
+                name: nombreArchivo,
+            } as any, {
+                contentType: "image/png"
+            }
+            )
+
+
+
+        if (error) {
+            Alert.alert('Error al subir imagen', error.message);
+            return null;
+        }
+
+        const { data: urlData } = supabase.storage
+            .from('pacientestatic')
+            .getPublicUrl(`public/${nombreArchivo}`);
+
+        return urlData.publicUrl;
+    }
+
+  
 
   const handleRegistro = async () => {
     if (
-      nombre === '' ||
-      edad === '' ||
-      usuario === '' ||
-      email === '' ||
-      password === '' ||
-      confirmarPassword === ''
+      !nombre || !edad || !usuario || !email || !password || !confirmarPassword ||
+      (!image && imagen.trim() === '')
     ) {
       Alert.alert('Todos los campos son obligatorios');
       return;
     }
+
     if (password !== confirmarPassword) {
       Alert.alert('Las contraseñas no coinciden');
       return;
@@ -33,25 +97,31 @@ export default function RegistroPacienteScreen({ navigation }: any) {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('Usuario creado:', userCredential.user);
       const user = userCredential.user;
 
-      try {
-        await set(ref(db, 'paciente/' + user.uid), {
-          uid: user.uid,
-          nombre,
-          edad,
-          nombreUsuario: usuario,
-          email,
-          fechaRegistro: new Date().toISOString(),
-        });
-        Alert.alert('Registro exitoso', 'Usuario creado correctamente');
-        navigation.navigate('login');
-      } catch (error) {
-        console.error('Error al guardar datos en BD:', error);
-        Alert.alert('Error', 'No se pudo guardar la información del paciente.');
+      let imagenFinal = imagen;
+      if (image) {
+        const urlSubida = await subirImagenStorage();
+        if (!urlSubida) return;
+        imagenFinal = urlSubida;
       }
+
+      await set(ref(db, 'paciente/' + user.uid), {
+        uid: user.uid,
+        nombre,
+        edad,
+        nombreUsuario: usuario,
+        email,
+        imagen: imagenFinal,
+        fechaRegistro: new Date().toISOString(),
+      });
+
+      Alert.alert('Registro exitoso', 'Paciente registrado correctamente');
+      limpiarCampos();
+      navigation.navigate('login');
+
     } catch (error: any) {
+      console.error(error);
       if (error.code === 'auth/email-already-in-use') {
         Alert.alert('Error', 'El correo ya está en uso');
       } else if (error.code === 'auth/invalid-email') {
@@ -59,153 +129,174 @@ export default function RegistroPacienteScreen({ navigation }: any) {
       } else if (error.code === 'auth/weak-password') {
         Alert.alert('Error', 'La contraseña es muy débil');
       } else {
-        Alert.alert('Error', 'No se pudo registrar el usuario');
+        Alert.alert('Error', 'No se pudo registrar el paciente');
       }
-      console.error(error);
     }
   };
 
-  return (
-    <ScrollView>
-      <View style={styles.container}>
-        <Text style={styles.title}>Crear una cuenta</Text>
-        <Ionicons name="person-add" size={48} color="#2B7A78" style={styles.icon} />
+  function limpiarCampos() {
+    setNombre('');
+    setEdad('');
+    setUsuario('');
+    setEmail('');
+    setPassword('');
+    setConfirmarPassword('');
+    setImagen('');
+    setImage(null);
+  }
 
-        <Text style={styles.label}>Nombre completo</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="person" size={20} color="#888" />
+  return (
+    <ImageBackground
+      source={{ uri: 'https://images.pexels.com/photos/3845125/pexels-photo-3845125.jpeg' }}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.container}>
+          <Text style={styles.titulo}>MedicPlus</Text>
+          <Text style={styles.subtitulo}>Registro de Paciente</Text>
+
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Nombre completo"
             value={nombre}
             onChangeText={setNombre}
-            style={styles.inputText}
-            placeholder="Nombre completo"
-            placeholderTextColor="#aaa"
           />
-        </View>
 
-        <Text style={styles.label}>Edad</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="calendar" size={20} color="#888" />
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Edad"
+            keyboardType="numeric"
             value={edad}
             onChangeText={setEdad}
-            style={styles.inputText}
-            placeholder="Edad"
-            placeholderTextColor="#aaa"
-            keyboardType="numeric"
           />
-        </View>
 
-        <Text style={styles.label}>Nombre de usuario</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="person" size={20} color="#888" />
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Nombre de usuario"
             value={usuario}
             onChangeText={setUsuario}
-            style={styles.inputText}
-            placeholder="Nombre de usuario"
-            placeholderTextColor="#aaa"
           />
-        </View>
 
-        <Text style={styles.label}>Correo electrónico</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="mail" size={20} color="#888" />
+          <Button title="Seleccione una imagen para su perfil" onPress={pickImage} />
+          <Button title="Tome una foto desde su celular" onPress={takePhoto} />
+
+          {image && <Image source={{ uri: image }} style={styles.image} />}
+
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Correo electrónico"
+            keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-            style={styles.inputText}
-            placeholder="ejemplo@correo.com"
-            placeholderTextColor="#aaa"
-            keyboardType="email-address"
           />
-        </View>
 
-        <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed" size={20} color="#888" />
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Contraseña"
+            secureTextEntry
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            style={styles.inputText}
-            placeholder="••••••••"
-            placeholderTextColor="#aaa"
           />
-        </View>
 
-        <Text style={styles.label}>Confirmar contraseña</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed" size={20} color="#888" />
           <TextInput
+            style={styles.inputContenedor}
+            placeholder="Confirmar contraseña"
+            secureTextEntry
             value={confirmarPassword}
             onChangeText={setConfirmarPassword}
-            secureTextEntry
-            style={styles.inputText}
-            placeholder="••••••••"
-            placeholderTextColor="#aaa"
           />
-        </View>
 
-        <View style={styles.buttonContainer}>
-          <Button title="Registrarse" color="#2B7A78" onPress={handleRegistro} />
+          <TouchableOpacity style={styles.Boton} onPress={handleRegistro}>
+            <View style={styles.btn}>
+              <Text style={styles.btnText}>Registrarse</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.ContainerL}>
+            <Text style={styles.TextL} onPress={() => navigation.navigate('login')}>
+              ¿Ya tienes cuenta? Inicia sesión
+            </Text>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    width: "100%",
-    height: "100%",
-    backgroundColor: '#DFF6F4',
-    padding: 24,
-    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
   },
-  title: {
-    fontSize: 28,
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  container: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    padding: 16,
+    borderRadius: 14,
+    marginVertical: 30,
+  },
+  titulo: {
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#2B7A78',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  icon: {
-    alignSelf: 'center',
+  subtitulo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAEA9',
+    textAlign: 'center',
     marginBottom: 24,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#20504F',
-    marginBottom: 6,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  inputContenedor: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#B6E2DD',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  inputText: {
-    flex: 1,
-    marginLeft: 5,
-    fontSize: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    marginBottom: 12,
+    fontSize: 14,
     color: '#333',
   },
-  buttonContainer: {
-    marginTop: 10,
+  Boton: {
+    marginBottom: 16,
     borderRadius: 10,
     overflow: 'hidden',
-    marginBottom: 40,
+  },
+  btn: {
+    backgroundColor: '#3AAFA9',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  btnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  ContainerL: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  TextL: {
+    fontSize: 14,
+    color: '#2B7A78',
+    textDecorationLine: 'underline',
+  },
+  image: {
+    width: 200,
+    height: 200,
+    resizeMode: "cover",
+    alignSelf: 'center',
+    borderRadius: 100,
+    marginVertical: 10,
   },
 });
