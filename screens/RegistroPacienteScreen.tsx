@@ -147,7 +147,7 @@ export default function RegistroPacienteScreen({ navigation }: any) {
 
   return (
     <ImageBackground
-      source={{ uri: 'https://images.pexels.com/photos/3845125/pexels-photo-3845125.jpeg' }}
+  source={require('../assets/fondo.jpg')} 
       style={styles.background}
       resizeMode="cover"
     >
@@ -178,8 +178,14 @@ export default function RegistroPacienteScreen({ navigation }: any) {
             onChangeText={setUsuario}
           />
 
-          <Button title="Seleccione una imagen para su perfil" onPress={pickImage} />
-          <Button title="Tome una foto desde su celular" onPress={takePhoto} />
+<TouchableOpacity style={styles.botonImagen} onPress={pickImage}>
+  <Text style={styles.textoBotonImagen}>Seleccionar imagen de perfil</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.botonImagen} onPress={takePhoto}>
+  <Text style={styles.textoBotonImagen}>Tomar foto desde cámara</Text>
+</TouchableOpacity>
+
 
           {image && <Image source={{ uri: image }} style={styles.image} />}
 
@@ -235,23 +241,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  container: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
+ container: {
+    backgroundColor: 'rgba(255,255,255,0.2)', 
     padding: 16,
     borderRadius: 14,
     marginVertical: 30,
-  },
+},
   titulo: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#2B7A78',
+    color: '#136966ff',
     textAlign: 'center',
     marginBottom: 4,
   },
   subtitulo: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAEA9',
+    color: '#41a09bff',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -288,7 +294,8 @@ const styles = StyleSheet.create({
   },
   TextL: {
     fontSize: 14,
-    color: '#2B7A78',
+    color: 'black',
+    fontWeight: "bold",
     textDecorationLine: 'underline',
   },
   image: {
@@ -299,4 +306,19 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     marginVertical: 10,
   },
+  botonImagen: {
+  backgroundColor: '#41a09bff',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  marginBottom: 10,
+  alignItems: 'center',
+  elevation: 2,
+},
+textoBotonImagen: {
+  color: 'white',
+  fontSize: 15,
+  fontWeight: 'bold',
+},
+
 });

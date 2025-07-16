@@ -1,4 +1,4 @@
-import { Alert, Button, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Alert, Button, Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import * as ImagePicker from 'expo-image-picker';
 
@@ -7,6 +7,10 @@ import { supabase } from '../../supabase/Config'
 import { ref, set } from 'firebase/database'
 import { db } from '../../firebase/Config2'
 import { auth } from '../../firebase/Config2'
+
+//mapa
+import { Pressable } from 'react-native'; 
+import MapView, { Marker } from 'react-native-maps';
 
 
 export default function GuardarCitaMedica() {
@@ -32,37 +36,18 @@ export default function GuardarCitaMedica() {
   const [idDoctorSeleccionado, setIdDoctorSeleccionado] = useState('')
   const [image, setImage] = useState<string | null>(null);
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
-  };
+//modal
+const [modalVisible, setModalVisible] = useState(false);
+const [markerCoords, setMarkerCoords] = useState({
+  latitude: -0.180653,
+  longitude: -78.467829,
+});
 
-  async function subir() {
-    const avatarFile = image!
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from('citas')
-      .upload('public/avatar1.png', {
-        uri: image,
-        cacheControl: '3600',
-        upsert: false
-      } as any, {
-        contentType: 'image/jpeg'
-      });
 
-    if (fileError) {
-      Alert.alert('Error al subir imagen', fileError.message);
-      return;
-    }
 
-  }
+
+
   useEffect(() => {
     if (especialidad_id) {
       cargarDoctoresPorEspecialidad(especialidad_id);
@@ -200,151 +185,196 @@ export default function GuardarCitaMedica() {
     setIdDoctorSeleccionado('')
   }
 
+
+
+
+
+
+
+
+
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        <Text style={styles.titulo}>Registrar Cita Médica</Text>
 
-        <Text style={styles.label}>Nombre del paciente</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre del paciente"
-          value={nombreApellidoPaciente}
-          onChangeText={setNombreApellidoPaciente}
-        />
+    <ImageBackground
+      source={require('../../assets/fondo.jpg')}
+      resizeMode="cover"
+    >
+      <ScrollView>
+        <View style={styles.container}>
+          <Text style={styles.titulo}>Registrar Cita Médica</Text>
 
-        <Text style={styles.label}>Cédula</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Cédula"
-          value={cedula}
-          keyboardType='numeric'
-          onChangeText={setCedula}
-        />
+          <Text style={styles.label}>Nombre del paciente</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre del paciente"
+            value={nombreApellidoPaciente}
+            onChangeText={setNombreApellidoPaciente}
+          />
 
-        <Text style={styles.label}>Edad</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Edad"
-          keyboardType='numeric'
-          value={edad}
-          onChangeText={setEdad}
-        />
+          <Text style={styles.label}>Cédula</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Cédula"
+            value={cedula}
+            keyboardType='numeric'
+            onChangeText={setCedula}
+          />
 
-        <Text style={styles.label}>Correo electrónico</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Correo electrónico"
-          keyboardType='email-address'
-          value={correoElectronico}
-          onChangeText={setCorreoElectronico}
-        />
+          <Text style={styles.label}>Edad</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Edad"
+            keyboardType='numeric'
+            value={edad}
+            onChangeText={setEdad}
+          />
 
-        <Text style={styles.label}>Teléfono</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Teléfono"
-          keyboardType='number-pad'
-          value={telefono}
-          onChangeText={setTelefono}
-        />
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Correo electrónico"
+            keyboardType='email-address'
+            value={correoElectronico}
+            onChangeText={setCorreoElectronico}
+          />
 
-        <Text style={styles.label}>Tipo de sangre</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Tipo de sangre"
-          value={tipoSangre}
-          onChangeText={setTipoSangre}
-        />
+          <Text style={styles.label}>Teléfono</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Teléfono"
+            keyboardType='number-pad'
+            value={telefono}
+            onChangeText={setTelefono}
+          />
 
-        <Text style={styles.label}>Dirección</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Dirección"
-          value={direccion}
-          onChangeText={setDireccion}
-        />
+          <Text style={styles.label}>Tipo de sangre</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Tipo de sangre"
+            value={tipoSangre}
+            onChangeText={setTipoSangre}
+          />
 
-        <Text style={styles.label}>Seleccione Especialidad</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={especialidad_id}
-            onValueChange={(value) => setEspecialidadRequerida(value)}
-            itemStyle={{ fontSize: 16 }}
-          >
-            <Picker.Item label="Seleccione una especialidad" value="" />
-            {listaEspecialidades.map((item) => (
-              <Picker.Item key={item.id} label={item.nombre_especialidad} value={item.id} />
-            ))}
-          </Picker>
-        </View>
+          <Text style={styles.label}>Dirección</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Dirección"
+            value={direccion}
+            onChangeText={setDireccion}
+          />
 
-        <Text style={styles.label}>Seleccione Doctor</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={idDoctorSeleccionado}
-            onValueChange={(value) => setIdDoctorSeleccionado(value)}
-            itemStyle={{ fontSize: 16 }}
-          >
-            <Picker.Item label="Seleccione un doctor" value="" />
-            {listaDoctores.map((item) => (
-              <Picker.Item key={item.id} label={item.nombreApellido} value={item.id} />
-            ))}
-          </Picker>
-        </View>
-
-        <Text style={styles.label}>Motivo</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Motivo"
-          value={motivo}
-          onChangeText={setMotivo}
-        />
-
-        <Text style={styles.label}>Fecha</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Fecha"
-          value={fecha}
-          onChangeText={setFecha}
-        />
-
-        <Text style={styles.label}>Ubicación</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ubicación"
-          value={ubicacionCita}
-          onChangeText={setUbicacionCita}
-        />
-
-        <TouchableOpacity style={styles.boton} onPress={pickImage}>
-          <View style={styles.btn}>
-            <Text style={styles.btnText}>Seleccionar Imagen (Rayos X, etc.)</Text>
+          <Text style={styles.label}>Seleccione Especialidad</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={especialidad_id}
+              onValueChange={(value) => setEspecialidadRequerida(value)}
+              itemStyle={{ fontSize: 16 }}
+            >
+              <Picker.Item label="Seleccione una especialidad" value="" />
+              {listaEspecialidades.map((item) => (
+                <Picker.Item key={item.id} label={item.nombre_especialidad} value={item.id} />
+              ))}
+            </Picker>
           </View>
-        </TouchableOpacity>
 
-        {image && (
-          <Image source={{ uri: image }} style={{ width: 200, height: 200, marginBottom: 20, alignSelf: 'center' }} />
-        )}
-     
-<TouchableOpacity
-  style={[styles.boton1, image == null && styles.botonDisabled]}
-  onPress={subir}
-  disabled={image == null}
->
-  <View >
-    <Text style={styles.btnText}>Subir Imagen</Text>
-  </View>
+          <Text style={styles.label}>Seleccione Doctor</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={idDoctorSeleccionado}
+              onValueChange={(value) => setIdDoctorSeleccionado(value)}
+              itemStyle={{ fontSize: 16 }}
+            >
+              <Picker.Item label="Seleccione un doctor" value="" />
+              {listaDoctores.map((item) => (
+                <Picker.Item key={item.id} label={item.nombreApellido} value={item.id} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Motivo</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Motivo"
+            value={motivo}
+            onChangeText={setMotivo}
+          />
+
+          <Text style={styles.label}>Fecha</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Fecha"
+            value={fecha}
+            onChangeText={setFecha}
+          />
+
+
+
+      <Text style={styles.label}>Ubicación</Text>
+<TextInput
+  style={styles.input}
+  placeholder="Ubicación"
+  value={ubicacionCita}
+  editable={false}
+/>
+
+<TouchableOpacity style={styles.boton1} onPress={() => setModalVisible(true)}>
+  <Text style={styles.btnText}>Seleccionar ubicación en mapa</Text>
 </TouchableOpacity>
 
+       
 
-        <TouchableOpacity style={styles.boton} onPress={guardarCita}>
-          <View style={styles.btn}>
-            <Text style={styles.btnText}>Guardar Cita</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+          <TouchableOpacity style={styles.boton} onPress={guardarCita}>
+            <View style={styles.btn}>
+              <Text style={styles.btnText}>Guardar Cita</Text>
+            </View>
+          </TouchableOpacity>
+
+
+
+{/* Mapa */}
+<Modal visible={modalVisible} animationType="slide">
+  <View style={{ flex: 1 }}>
+    <MapView
+      style={{ flex: 1 }}
+      initialRegion={{
+        latitude: markerCoords.latitude,
+        longitude: markerCoords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }}
+      onPress={(e) => {
+        const { latitude, longitude } = e.nativeEvent.coordinate;
+        setMarkerCoords({ latitude, longitude });
+      }}
+    >
+      <Marker coordinate={markerCoords} />
+    </MapView>
+    <View style={{ padding: 10 }}>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={() => {
+          setUbicacionCita(`${markerCoords.latitude}, ${markerCoords.longitude}`);
+          setModalVisible(false);
+        }}
+      >
+        <Text style={styles.btnText}>Confirmar ubicación</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.btn, { backgroundColor: '#FF6B6B', marginTop: 10 }]}
+        onPress={() => setModalVisible(false)}
+      >
+        <Text style={styles.btnText}>Cancelar</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+
+        </View>
+      </ScrollView>
+    </ImageBackground>
   )
 }
 
@@ -352,12 +382,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#DFF6F4',
-  },
+    },
   titulo: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2B7A78',
+    color: '#1d928eff',
     textAlign: 'center',
     marginBottom: 24,
     marginTop: 40
@@ -389,7 +418,8 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: 'bold',
     marginBottom: 6,
-    color: '#2B7A78',
+    color: '#146663ff',
+    fontSize: 16
   },
   boton: {
     marginBottom: 30,
@@ -401,6 +431,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    marginTop: 10
   },
   btnText: {
     color: '#fff',
@@ -408,15 +439,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   botonDisabled: {
-  opacity: 0.5,
-},
-boton1:{
-  backgroundColor: "hsl(198, 78%, 64%)",
-      paddingVertical: 15,
+    opacity: 0.5,
+  },
+  boton1: {
+    backgroundColor: "hsl(198, 78%, 64%)",
+    paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
-      marginBottom: 20,
+    marginBottom: 20,
 
-}
- 
+  }
+
 })

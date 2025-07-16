@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import {
+  View, Text, TextInput, Alert, StyleSheet,
+  TouchableOpacity, Image, ImageBackground, ScrollView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/Config2';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -38,70 +41,86 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>BIENVENIDO</Text>
-      <Text style={styles.subtitulo}>medicPLus</Text>
+    <ImageBackground
+      source={require('../assets/fondologin.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.container}>
+          <Text style={styles.titulo}>BIENVENIDO</Text>
+          <Text style={styles.subtitulo}>medicPLus</Text>
 
-      <Image source={require('../assets/paciente.jpg')} style={styles.image} />
+          <Image source={require('../assets/paciente.jpg')} style={styles.image} />
 
-      <Text style={styles.label}>Email</Text>
-      <View style={styles.inputContenedor}>
-        <Ionicons name="mail" size={20} color="#888" />
-        <TextInput
-          style={styles.inputTexto}
-          placeholder='Ingrese su email'
-          onChangeText={setEmail}
-          value={email}
-          keyboardType="email-address"
-          autoCorrect={false}
-        />
-      </View>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputContenedor}>
+            <Ionicons name="mail" size={20} color="#888" />
+            <TextInput
+              style={styles.inputTexto}
+              placeholder='Ingrese su email'
+              onChangeText={setEmail}
+              value={email}
+              keyboardType="email-address"
+              autoCorrect={false}
+            />
+          </View>
 
-      <Text style={styles.label}>Contraseña</Text>
-      <View style={styles.inputContenedor}>
-        <Ionicons name="lock-closed" size={20} color="#888" />
-        <TextInput
-          placeholder='Ingrese su contraseña'
-          style={styles.inputTexto}
-          secureTextEntry
-          onChangeText={setPassword}
-          value={password}
-          autoCorrect={false}
-        />
-      </View>
+          <Text style={styles.label}>Contraseña</Text>
+          <View style={styles.inputContenedor}>
+            <Ionicons name="lock-closed" size={20} color="#888" />
+            <TextInput
+              placeholder='Ingrese su contraseña'
+              style={styles.inputTexto}
+              secureTextEntry
+              onChangeText={setPassword}
+              value={password}
+              autoCorrect={false}
+            />
+          </View>
 
-      <TouchableOpacity style={styles.boton} onPress={handleLogin}>
-        <Text style={styles.textoBoton}>Iniciar Sesión</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.boton} onPress={handleLogin}>
+            <Text style={styles.textoBoton}>Iniciar Sesión</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.ContainerL}
-        onPress={() => navigation.navigate('Registro paciente')}
-      >
-        <Text style={styles.TextL}>¿No tienes cuenta? Regístrate</Text>
-      </TouchableOpacity>
-    </View>
+          <TouchableOpacity
+            style={styles.ContainerL}
+            onPress={() => navigation.navigate('Registro paciente')}
+          >
+            <Text style={styles.TextL}>¿No tienes cuenta? Regístrate</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    padding: 24,
+    width: '100%',
+    height: '100%',
+  },
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
-    backgroundColor: '#DFF6F4',
+    padding: 20,
+  },
+  container: {
+    padding: 24,
+    borderRadius: 14,
   },
   titulo: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#2B7A78',
+    color: '#1b8d87ff',
     textAlign: 'center',
     marginBottom: 20,
   },
   subtitulo: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAEA9',
+    color: '#2f7471ff',
     textAlign: 'center',
     marginBottom: 16,
     textTransform: 'uppercase',
@@ -151,8 +170,9 @@ const styles = StyleSheet.create({
   },
   TextL: {
     fontSize: 14,
-    color: '#2B7A78',
+    color: '#434949ff',
     textDecorationLine: 'underline',
+    fontWeight: "bold"
   },
   image: {
     width: 120,

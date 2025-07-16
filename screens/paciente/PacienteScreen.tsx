@@ -47,9 +47,9 @@ export default function PerfilPacienteScreen({ navigation }: any) {
 
   return (
     <ImageBackground
-      source={{ uri: 'https://img.freepik.com/foto-gratis/estetoscopio-sobre-fondo-azul_23-2148195295.jpg' }}
+      source={require('../../assets/fondo6.jpg')}
       style={styles.background}
-      blurRadius={1}
+      resizeMode="cover"
     >
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.bienvenida}>Bienvenido(a)</Text>
@@ -92,26 +92,29 @@ export default function PerfilPacienteScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: '#DFF6F4',
-    resizeMode: 'cover',
+    width: '100%',
+    height: '100%',
   },
+  
   container: {
-    padding: 20,
-    marginVertical: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 24,
+    borderRadius: 14,
+    paddingBottom: 20
   },
   bienvenida: {
     fontSize: 22,
-    color: '#4CAEA9',
+    color: '#27918bff',
     marginBottom: 6,
     fontWeight: '600',
     textAlign: 'center',
+    paddingVertical: 5,
+    marginTop: 40
+
   },
   nombre: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2B7A78',
+    color: '#1a7c79ff',
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -122,31 +125,30 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     resizeMode: 'cover',
     borderWidth: 2,
-    borderColor: '#3AAFA9',
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    width: '100%',
-    borderRadius: 12,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
     elevation: 5,
+    textAlign: "center",
   },
   label: {
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: '600',
     color: '#20504F',
     marginTop: 12,
+        textAlign: "center"
+
   },
   valor: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 17,
+    color: 'black',
     marginTop: 4,
+            textAlign: "center"
+
   },
   boton: {
-    backgroundColor: '#2B7A78',
+    backgroundColor: '#32a8a4ff',
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 10,
@@ -156,7 +158,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   botonCerrar: {
-    backgroundColor: '#C70039',
+    backgroundColor: '#b12a50ff',
     marginBottom: 60,
   },
   textoBoton: {
