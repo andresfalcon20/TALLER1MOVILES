@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {Alert, Button, Image, ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import { Alert, Button, Image, ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -17,69 +17,67 @@ export default function RegistroPacienteScreen({ navigation }: any) {
   const [imagen, setImagen] = useState('');
   const [image, setImage] = useState<string | null>(null);
 
-    const pickImage = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images', 'videos'],
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 1,
-        });
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 1,
+    });
 
-        console.log(result);
+    console.log(result);
 
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
-    };
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
 
-    const takePhoto = async () => {
-        let result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images', 'videos'],
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 1,
-        });
-        console.log(result);
+  const takePhoto = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 1,
+    });
+    console.log(result);
 
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
-    };
-
-
-    //SUBIR IMAAGEN
-    async function subirImagenStorage(): Promise<string | null> {
-        if (!image) return null;
-        const nombreArchivo =`fotoperfil_${Date.now()}.png`;
-
-        const { data, error } = await supabase
-            .storage
-            .from('doctorstatic')
-            .upload(`public/${nombreArchivo}`, {
-                uri: image,
-                cacheControl: '3600',
-                upsert: false,
-                name: nombreArchivo,
-            } as any, {
-                contentType: "image/png"
-            }
-            )
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
 
 
+  //SUBIR IMAAGEN
+  async function subirImagenStoragePaciente(): Promise<string | null> {
+    if (!image) return null;
 
-        if (error) {
-            Alert.alert('Error al subir imagen', error.message);
-            return null;
-        }
+    const nombreArchivo = `fotoperfil_${Date.now()}.png`;
 
-        const { data: urlData } = supabase.storage
-            .from('pacientestatic')
-            .getPublicUrl(`public/${nombreArchivo}`);
+    const { data, error } = await supabase
+      .storage
+      .from('pacientestatic')
+      .upload(`public/${nombreArchivo}`, {
+        uri: image,
+        cacheControl: '3600',
+        upsert: false,
+        name: nombreArchivo,
+      } as any, {
+        contentType: "image/png"
+      });
 
-        return urlData.publicUrl;
+    if (error) {
+      Alert.alert('Error al subir imagen', error.message);
+      return null;
     }
 
-  
+    const { data: urlData } = supabase
+      .storage
+      .from('pacientestatic')
+      .getPublicUrl(`public/${nombreArchivo}`);
+
+    return urlData?.publicUrl || null;
+  }
+
 
   const handleRegistro = async () => {
     if (
@@ -96,18 +94,33 @@ export default function RegistroPacienteScreen({ navigation }: any) {
     }
 
     try {
+      // 1. Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const userFirebase = userCredential.user;
 
+      // 2. Crear usuario también en Supabase Auth
+      const { error: supabaseAuthError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (supabaseAuthError) {
+        console.error('Error en Supabase Auth:', supabaseAuthError.message);
+        Alert.alert('Error', 'No se pudo registrar en Supabase Auth');
+        return;
+      }
+
+      // 3. Subir imagen a Supabase Storage
       let imagenFinal = imagen;
       if (image) {
-        const urlSubida = await subirImagenStorage();
+        const urlSubida = await subirImagenStoragePaciente();
         if (!urlSubida) return;
         imagenFinal = urlSubida;
       }
 
-      await set(ref(db, 'paciente/' + user.uid), {
-        uid: user.uid,
+      // 4. Guardar en Firebase Realtime Database
+      await set(ref(db, 'paciente/' + userFirebase.uid), {
+        uid: userFirebase.uid,
         nombre,
         edad,
         nombreUsuario: usuario,
@@ -116,12 +129,30 @@ export default function RegistroPacienteScreen({ navigation }: any) {
         fechaRegistro: new Date().toISOString(),
       });
 
+      // 5. Guardar en Supabase table 'paciente'
+      const { error: insertError } = await supabase.from('paciente').insert([
+        {
+          nombre,
+          edad,
+          usuario,
+          correo: email,
+          imagen: imagenFinal,
+        },
+      ]);
+
+      if (insertError) {
+        console.error("Error al guardar en Supabase table:", insertError.message);
+        Alert.alert('Error al guardar en Supabase DB', insertError.message);
+        return;
+      }
+
+      // 6. Confirmación
       Alert.alert('Registro exitoso', 'Paciente registrado correctamente');
       limpiarCampos();
-      navigation.navigate('login');
+      navigation.navigate('Login');
 
     } catch (error: any) {
-      console.error(error);
+      console.error('Error general:', error);
       if (error.code === 'auth/email-already-in-use') {
         Alert.alert('Error', 'El correo ya está en uso');
       } else if (error.code === 'auth/invalid-email') {
@@ -147,7 +178,7 @@ export default function RegistroPacienteScreen({ navigation }: any) {
 
   return (
     <ImageBackground
-  source={require('../assets/fondo.jpg')} 
+      source={require('../assets/fondo.jpg')}
       style={styles.background}
       resizeMode="cover"
     >
@@ -178,13 +209,13 @@ export default function RegistroPacienteScreen({ navigation }: any) {
             onChangeText={setUsuario}
           />
 
-<TouchableOpacity style={styles.botonImagen} onPress={pickImage}>
-  <Text style={styles.textoBotonImagen}>Seleccionar imagen de perfil</Text>
-</TouchableOpacity>
+          <TouchableOpacity style={styles.botonImagen} onPress={pickImage}>
+            <Text style={styles.textoBotonImagen}>Seleccionar imagen de perfil</Text>
+          </TouchableOpacity>
 
-<TouchableOpacity style={styles.botonImagen} onPress={takePhoto}>
-  <Text style={styles.textoBotonImagen}>Tomar foto desde cámara</Text>
-</TouchableOpacity>
+          <TouchableOpacity style={styles.botonImagen} onPress={takePhoto}>
+            <Text style={styles.textoBotonImagen}>Tomar foto desde cámara</Text>
+          </TouchableOpacity>
 
 
           {image && <Image source={{ uri: image }} style={styles.image} />}
@@ -220,7 +251,7 @@ export default function RegistroPacienteScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View style={styles.ContainerL}>
-            <Text style={styles.TextL} onPress={() => navigation.navigate('login')}>
+            <Text style={styles.TextL} onPress={() => navigation.navigate('Login')}>
               ¿Ya tienes cuenta? Inicia sesión
             </Text>
           </View>
@@ -241,12 +272,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
- container: {
-    backgroundColor: 'rgba(255,255,255,0.2)', 
+  container: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
     padding: 16,
     borderRadius: 14,
     marginVertical: 30,
-},
+  },
   titulo: {
     fontSize: 30,
     fontWeight: 'bold',
@@ -307,18 +338,18 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   botonImagen: {
-  backgroundColor: '#41a09bff',
-  paddingVertical: 12,
-  paddingHorizontal: 20,
-  borderRadius: 10,
-  marginBottom: 10,
-  alignItems: 'center',
-  elevation: 2,
-},
-textoBotonImagen: {
-  color: 'white',
-  fontSize: 15,
-  fontWeight: 'bold',
-},
+    backgroundColor: '#41a09bff',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+    elevation: 2,
+  },
+  textoBotonImagen: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
 
 });

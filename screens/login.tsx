@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/Config2';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { supabase } from '../supabase/Config';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -18,7 +19,22 @@ export default function LoginScreen({ navigation }: any) {
     }
 
     try {
+      // Login en Firebase
       await signInWithEmailAndPassword(auth, email, password);
+
+      // Login en Supabase
+      const { error: supaError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (supaError) {
+        console.error('Error Supabase:', supaError.message);
+        Alert.alert('Error', 'No se pudo iniciar sesión en Supabase.');
+        return;
+      }
+
+      // Si ambos login fueron exitosos
       navigation.navigate('PacienteScreen');
     } catch (error: any) {
       let mensaje = 'Error al iniciar sesión.';

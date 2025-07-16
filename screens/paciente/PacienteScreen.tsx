@@ -1,39 +1,79 @@
 import { Alert, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { auth, db } from '../../firebase/Config2';
-import { get, ref } from 'firebase/database';
+import { supabase } from '../../supabase/Config';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase/Config2';
+
+type Paciente = {
+  nombre: string;
+  edad: string;
+  nombreUsuario: string;
+  correo: string;
+  imagen: string;
+};
 
 export default function PerfilPacienteScreen({ navigation }: any) {
-  const [paciente, setPaciente] = useState<any>(null);
+  const [paciente, setPaciente] = useState<Paciente | null>(null);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      const uid = user.uid;
-      const pacienteRef = ref(db, `paciente/${uid}`);
+    async function cargarDatosPaciente() {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error("No se pudo obtener el usuario:", userError?.message);
+        return;
+      }
 
-      get(pacienteRef)
-        .then((snapshot) => {
-          if (snapshot.exists()) {
-            setPaciente(snapshot.val());
-          } else {
-            Alert.alert('Datos no encontrados', 'No se encontraron datos del paciente.');
-          }
-        })
-        .catch((error) => {
-          console.error('Error al obtener datos del paciente:', error);
-          Alert.alert('Error', 'No se pudieron obtener los datos del paciente.');
-        });
+      const { data, error } = await supabase
+        .from('paciente')
+        .select(`
+          nombre,
+          edad,
+          nombreUsuario:usuario,
+          correo,
+          imagen
+        `)
+        .eq('correo', user.email)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error al cargar paciente:', error.message);
+        Alert.alert('Error', 'No se pudo cargar el perfil del paciente.');
+        return;
+      }
+
+      if (!data) {
+        Alert.alert('Advertencia', 'No se encontraron datos del paciente.');
+        return;
+      }
+
+      setPaciente({
+        nombre: data.nombre,
+        edad: data.edad,
+        nombreUsuario: data.nombreUsuario,
+        correo: data.correo,
+        imagen: data.imagen ?? '',
+      });
     }
+
+    cargarDatosPaciente();
   }, []);
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      // Cierra sesión en Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        Alert.alert('Error', 'No se pudo cerrar sesión en Supabase.');
+        return;
+      }
+
+      // Cierra sesión en Firebase
+      await signOut(auth);
+
       Alert.alert('Sesión cerrada', 'Has cerrado sesión correctamente.');
       navigation.replace('Login');
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo cerrar sesión.');
+    } catch (error: any) {
+      Alert.alert('Error', `No se pudo cerrar sesión: ${error.message}`);
     }
   };
 
@@ -55,8 +95,10 @@ export default function PerfilPacienteScreen({ navigation }: any) {
         <Text style={styles.bienvenida}>Bienvenido(a)</Text>
         <Text style={styles.nombre}>{paciente.nombre}</Text>
 
-        {paciente.imagen && (
+        {paciente.imagen ? (
           <Image source={{ uri: paciente.imagen }} style={styles.img} />
+        ) : (
+          <Text style={{ color: '#666', marginVertical: 10 }}>Sin imagen de perfil</Text>
         )}
 
         <View style={styles.card}>
@@ -67,7 +109,7 @@ export default function PerfilPacienteScreen({ navigation }: any) {
           <Text style={styles.valor}>{paciente.nombreUsuario}</Text>
 
           <Text style={styles.label}>Correo electrónico:</Text>
-          <Text style={styles.valor}>{paciente.email}</Text>
+          <Text style={styles.valor}>{paciente.correo}</Text>
 
           <Text style={styles.label}>Edad:</Text>
           <Text style={styles.valor}>{paciente.edad} años</Text>
@@ -89,13 +131,13 @@ export default function PerfilPacienteScreen({ navigation }: any) {
   );
 }
 
+
 const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-  
   container: {
     padding: 24,
     borderRadius: 14,
@@ -109,7 +151,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 5,
     marginTop: 40
-
   },
   nombre: {
     fontSize: 28,
@@ -125,27 +166,28 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     resizeMode: 'cover',
     borderWidth: 2,
+    borderColor: '#27918bff'
   },
   card: {
     padding: 20,
     marginBottom: 20,
     elevation: 5,
     textAlign: "center",
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 14,
   },
   label: {
     fontSize: 18,
     fontWeight: '600',
     color: '#20504F',
     marginTop: 12,
-        textAlign: "center"
-
+    textAlign: "center"
   },
   valor: {
     fontSize: 17,
     color: 'black',
     marginTop: 4,
-            textAlign: "center"
-
+    textAlign: "center"
   },
   boton: {
     backgroundColor: '#32a8a4ff',
