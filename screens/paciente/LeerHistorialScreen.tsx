@@ -68,9 +68,10 @@ export default function LeerHistorialScreen() {
               <Text style={styles.description}>Estado: {item.estado}</Text>
 
             </View>
+
           )}
         />
-      </View>
+        </View>
     </ImageBackground>
   );
 }
@@ -82,6 +83,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     padding: 24,
+    
   },
   title: {
     fontSize: 24,
@@ -102,6 +104,9 @@ const styles = StyleSheet.create({
     elevation: 1,
       borderWidth: 0.5,      
   borderColor: 'black',
+      backgroundColor: 'rgba(255,255,255,0.5)',
+
+  
   },
   date: {
     fontSize: 16,

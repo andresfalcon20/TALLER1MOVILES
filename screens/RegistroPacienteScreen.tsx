@@ -146,7 +146,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
         return;
       }
 
-      // 6. Confirmación
       Alert.alert('Registro exitoso', 'Paciente registrado correctamente');
       limpiarCampos();
       navigation.navigate('Login');

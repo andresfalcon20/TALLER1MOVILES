@@ -158,7 +158,7 @@ const [markerCoords, setMarkerCoords] = useState({
         ...datosCita,
         id: idGenerado,
         idPaciente: idPaciente,
-        nombreApellidoDoctor, // ahora también guardamos el nombre
+        nombreApellidoDoctor, 
       })
 
       Alert.alert('Éxito', 'Cita médica registrada en ambas bases de datos.')

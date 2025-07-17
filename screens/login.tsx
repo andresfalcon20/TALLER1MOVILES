@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TextInput, Alert, StyleSheet,
-  TouchableOpacity, Image, ImageBackground, ScrollView
-} from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, Image, ImageBackground, ScrollView, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../firebase/Config2';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -30,6 +27,7 @@ export default function LoginScreen({ navigation }: any) {
 
       if (supaError) {
         console.error('Error Supabase:', supaError.message);
+        Vibration.vibrate(500); // Vibración en error
         Alert.alert('Error', 'No se pudo iniciar sesión en Supabase.');
         return;
       }
@@ -38,6 +36,10 @@ export default function LoginScreen({ navigation }: any) {
       navigation.navigate('PacienteScreen');
     } catch (error: any) {
       let mensaje = 'Error al iniciar sesión.';
+
+      // Vibrar si hay error
+      Vibration.vibrate(500);
+
       switch (error.code) {
         case 'auth/invalid-email':
           mensaje = 'Correo electrónico no válido.';
@@ -52,6 +54,7 @@ export default function LoginScreen({ navigation }: any) {
           mensaje = 'Contraseña incorrecta.';
           break;
       }
+
       Alert.alert('Error de autenticación', mensaje);
     }
   };
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#434949ff',
     textDecorationLine: 'underline',
-    fontWeight: "bold"
+    fontWeight: 'bold',
   },
   image: {
     width: 120,

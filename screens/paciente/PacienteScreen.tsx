@@ -166,15 +166,19 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     resizeMode: 'cover',
     borderWidth: 2,
-    borderColor: '#27918bff'
+    borderColor: '#27918bff',
+  alignSelf: 'center', 
+    
   },
   card: {
-    padding: 20,
-    marginBottom: 20,
-    elevation: 5,
-    textAlign: "center",
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 14,
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    shadowRadius: 2,
+    elevation: 1,
+      borderWidth: 0.5,      
+  borderColor: 'black',
+      backgroundColor: 'rgba(255,255,255,0.7',
   },
   label: {
     fontSize: 18,
