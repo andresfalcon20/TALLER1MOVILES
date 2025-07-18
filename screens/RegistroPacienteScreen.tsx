@@ -47,7 +47,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
   };
 
 
-  //SUBIR IMAAGEN
   async function subirImagenStoragePaciente(): Promise<string | null> {
     if (!image) return null;
 
@@ -94,11 +93,9 @@ export default function RegistroPacienteScreen({ navigation }: any) {
     }
 
     try {
-      // 1. Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const userFirebase = userCredential.user;
 
-      // 2. Crear usuario también en Supabase Auth
       const { error: supabaseAuthError } = await supabase.auth.signUp({
         email,
         password,
@@ -110,7 +107,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
         return;
       }
 
-      // 3. Subir imagen a Supabase Storage
       let imagenFinal = imagen;
       if (image) {
         const urlSubida = await subirImagenStoragePaciente();
@@ -118,7 +114,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
         imagenFinal = urlSubida;
       }
 
-      // 4. Guardar en Firebase Realtime Database
       await set(ref(db, 'paciente/' + userFirebase.uid), {
         uid: userFirebase.uid,
         nombre,
@@ -129,7 +124,6 @@ export default function RegistroPacienteScreen({ navigation }: any) {
         fechaRegistro: new Date().toISOString(),
       });
 
-      // 5. Guardar en Supabase table 'paciente'
       const { error: insertError } = await supabase.from('paciente').insert([
         {
           nombre,

@@ -16,10 +16,8 @@ export default function LoginScreen({ navigation }: any) {
     }
 
     try {
-      // Login en Firebase
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Login en Supabase
       const { error: supaError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -27,17 +25,15 @@ export default function LoginScreen({ navigation }: any) {
 
       if (supaError) {
         console.error('Error Supabase:', supaError.message);
-        Vibration.vibrate(500); // Vibración en error
+        Vibration.vibrate(500); 
         Alert.alert('Error', 'No se pudo iniciar sesión en Supabase.');
         return;
       }
 
-      // Si ambos login fueron exitosos
       navigation.navigate('PacienteScreen');
     } catch (error: any) {
       let mensaje = 'Error al iniciar sesión.';
 
-      // Vibrar si hay error
       Vibration.vibrate(500);
 
       switch (error.code) {

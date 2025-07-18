@@ -9,7 +9,7 @@ import { db } from '../../firebase/Config2'
 import { auth } from '../../firebase/Config2'
 
 //mapa
-import { Pressable } from 'react-native'; 
+import { Pressable } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 
@@ -37,12 +37,12 @@ export default function GuardarCitaMedica() {
   const [image, setImage] = useState<string | null>(null);
 
 
-//modal
-const [modalVisible, setModalVisible] = useState(false);
-const [markerCoords, setMarkerCoords] = useState({
-  latitude: -0.180653,
-  longitude: -78.467829,
-});
+  //modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [markerCoords, setMarkerCoords] = useState({
+    latitude: -0.180653,
+    longitude: -78.467829,
+  });
 
 
 
@@ -135,6 +135,7 @@ const [markerCoords, setMarkerCoords] = useState({
       estado: "PENDIENTE",
       fecha,
       ubicacionCita,
+      paciente_id: idPaciente,
     }
 
     try {
@@ -158,7 +159,7 @@ const [markerCoords, setMarkerCoords] = useState({
         ...datosCita,
         id: idGenerado,
         idPaciente: idPaciente,
-        nombreApellidoDoctor, 
+        nombreApellidoDoctor, // ahora también guardamos el nombre
       })
 
       Alert.alert('Éxito', 'Cita médica registrada en ambas bases de datos.')
@@ -216,6 +217,7 @@ const [markerCoords, setMarkerCoords] = useState({
             style={styles.input}
             placeholder="Cédula"
             value={cedula}
+            maxLength={10}
             keyboardType='numeric'
             onChangeText={setCedula}
           />
@@ -225,6 +227,7 @@ const [markerCoords, setMarkerCoords] = useState({
             style={styles.input}
             placeholder="Edad"
             keyboardType='numeric'
+            maxLength={3}
             value={edad}
             onChangeText={setEdad}
           />
@@ -243,6 +246,7 @@ const [markerCoords, setMarkerCoords] = useState({
             style={styles.input}
             placeholder="Teléfono"
             keyboardType='number-pad'
+            maxLength={10}
             value={telefono}
             onChangeText={setTelefono}
           />
@@ -309,19 +313,19 @@ const [markerCoords, setMarkerCoords] = useState({
 
 
 
-      <Text style={styles.label}>Ubicación</Text>
-<TextInput
-  style={styles.input}
-  placeholder="Ubicación"
-  value={ubicacionCita}
-  editable={false}
-/>
+          <Text style={styles.label}>Ubicación</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ubicación"
+            value={ubicacionCita}
+            editable={false}
+          />
 
-<TouchableOpacity style={styles.boton1} onPress={() => setModalVisible(true)}>
-  <Text style={styles.btnText}>Seleccionar ubicación en mapa</Text>
-</TouchableOpacity>
+          <TouchableOpacity style={styles.boton1} onPress={() => setModalVisible(true)}>
+            <Text style={styles.btnText}>Seleccionar ubicación en mapa</Text>
+          </TouchableOpacity>
 
-       
+
 
 
           <TouchableOpacity style={styles.boton} onPress={guardarCita}>
@@ -332,44 +336,44 @@ const [markerCoords, setMarkerCoords] = useState({
 
 
 
-{/* Mapa */}
-<Modal visible={modalVisible} animationType="slide">
-  <View style={{ flex: 1 }}>
-    <MapView
-      style={{ flex: 1 }}
-      initialRegion={{
-        latitude: markerCoords.latitude,
-        longitude: markerCoords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }}
-      onPress={(e) => {
-        const { latitude, longitude } = e.nativeEvent.coordinate;
-        setMarkerCoords({ latitude, longitude });
-      }}
-    >
-      <Marker coordinate={markerCoords} />
-    </MapView>
-    <View style={{ padding: 10 }}>
-      <TouchableOpacity
-        style={styles.btn}
-        onPress={() => {
-          setUbicacionCita(`${markerCoords.latitude}, ${markerCoords.longitude}`);
-          setModalVisible(false);
-        }}
-      >
-        <Text style={styles.btnText}>Confirmar ubicación</Text>
-      </TouchableOpacity>
+          {/* Mapa */}
+          <Modal visible={modalVisible} animationType="slide">
+            <View style={{ flex: 1 }}>
+              <MapView
+                style={{ flex: 1 }}
+                initialRegion={{
+                  latitude: markerCoords.latitude,
+                  longitude: markerCoords.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+                onPress={(e) => {
+                  const { latitude, longitude } = e.nativeEvent.coordinate;
+                  setMarkerCoords({ latitude, longitude });
+                }}
+              >
+                <Marker coordinate={markerCoords} />
+              </MapView>
+              <View style={{ padding: 10 }}>
+                <TouchableOpacity
+                  style={styles.btn}
+                  onPress={() => {
+                    setUbicacionCita(`${markerCoords.latitude}, ${markerCoords.longitude}`);
+                    setModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.btnText}>Confirmar ubicación</Text>
+                </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.btn, { backgroundColor: '#FF6B6B', marginTop: 10 }]}
-        onPress={() => setModalVisible(false)}
-      >
-        <Text style={styles.btnText}>Cancelar</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: '#FF6B6B', marginTop: 10 }]}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.btnText}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
 
 
         </View>
@@ -382,7 +386,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    },
+  },
   titulo: {
     fontSize: 28,
     fontWeight: 'bold',

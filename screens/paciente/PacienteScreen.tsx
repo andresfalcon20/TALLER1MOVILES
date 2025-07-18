@@ -1,79 +1,81 @@
-import { Alert, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ImageBackground, ScrollView, StyleSheet, Text,
+TouchableOpacity,
+  View,
+} from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../supabase/Config';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase/Config2';
+import { auth, db } from '../../firebase/Config2';
+import { get, ref } from 'firebase/database';
+import { supabase } from '../../supabase/Config'; 
 
-type Paciente = {
-  nombre: string;
-  edad: string;
-  nombreUsuario: string;
-  correo: string;
-  imagen: string;
-};
-
-export default function PerfilPacienteScreen({ navigation }: any) {
-  const [paciente, setPaciente] = useState<Paciente | null>(null);
+export default function PacienteScreen({ navigation }: any) {
+  const [paciente, setPaciente] = useState<any>(null);
+  const [promedioCalificaciones, setPromedioCalificaciones] = useState<number | null>(null);
 
   useEffect(() => {
-    async function cargarDatosPaciente() {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error("No se pudo obtener el usuario:", userError?.message);
-        return;
-      }
+    const user = auth.currentUser;
+    if (user) {
+      const uid = user.uid;
+      const pacienteRef = ref(db, `paciente/${uid}`);
 
-      const { data, error } = await supabase
-        .from('paciente')
-        .select(`
-          nombre,
-          edad,
-          nombreUsuario:usuario,
-          correo,
-          imagen
-        `)
-        .eq('correo', user.email)
-        .maybeSingle();
+      get(pacienteRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            setPaciente(snapshot.val());
+            cargarPromedioCalificacion(uid);
+          } else {
+            Alert.alert('Datos no encontrados', 'No se encontraron datos del paciente.');
+          }
+        })
+        .catch((error) => {
+          console.error('Error al obtener datos del paciente:', error);
+          Alert.alert('Error', 'No se pudieron obtener los datos del paciente.');
+        });
+    }
+  }, []);
 
-      if (error) {
-        console.error('Error al cargar paciente:', error.message);
-        Alert.alert('Error', 'No se pudo cargar el perfil del paciente.');
-        return;
-      }
+  async function cargarPromedioCalificacion(pacienteId: string) {
+    const { data, error } = await supabase
+      .from('citaMedica')
+      .select('calificacionPaciente')
+      .eq('paciente_id', pacienteId)
+      .not('calificacionPaciente', 'is', null);
 
-      if (!data) {
-        Alert.alert('Advertencia', 'No se encontraron datos del paciente.');
-        return;
-      }
-
-      setPaciente({
-        nombre: data.nombre,
-        edad: data.edad,
-        nombreUsuario: data.nombreUsuario,
-        correo: data.correo,
-        imagen: data.imagen ?? '',
-      });
+    if (error) {
+      console.error('Error al obtener calificaciones:', error.message);
+      setPromedioCalificaciones(null);
+      return;
     }
 
-    cargarDatosPaciente();
-  }, []);
+    if (!data || data.length === 0) {
+      setPromedioCalificaciones(null);
+      return;
+    }
+
+    const calificacionesNumericas = data
+      .map(item => {
+        const val = item.calificacionPaciente?.toString().trim();
+        const num = Number(val);
+        return val && !isNaN(num) ? num : null;
+      })
+      .filter((num): num is number => num !== null);
+
+    if (calificacionesNumericas.length === 0) {
+      setPromedioCalificaciones(null);
+      return;
+    }
+
+    const suma = calificacionesNumericas.reduce((acc, val) => acc + val, 0);
+    const promedio = suma / calificacionesNumericas.length;
+    setPromedioCalificaciones(promedio);
+  }
 
   const handleLogout = async () => {
     try {
-      // Cierra sesión en Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        Alert.alert('Error', 'No se pudo cerrar sesión en Supabase.');
-        return;
-      }
-
-      // Cierra sesión en Firebase
-      await signOut(auth);
-
+      await auth.signOut();
       Alert.alert('Sesión cerrada', 'Has cerrado sesión correctamente.');
       navigation.replace('Login');
-    } catch (error: any) {
-      Alert.alert('Error', `No se pudo cerrar sesión: ${error.message}`);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo cerrar sesión.');
     }
   };
 
@@ -95,10 +97,10 @@ export default function PerfilPacienteScreen({ navigation }: any) {
         <Text style={styles.bienvenida}>Bienvenido(a)</Text>
         <Text style={styles.nombre}>{paciente.nombre}</Text>
 
-        {paciente.imagen ? (
-          <Image source={{ uri: paciente.imagen }} style={styles.img} />
-        ) : (
-          <Text style={{ color: '#666', marginVertical: 10 }}>Sin imagen de perfil</Text>
+        {paciente.imagen && (
+          <View style={styles.imgContainer}>
+            <Image source={{ uri: paciente.imagen }} style={styles.img} />
+          </View>
         )}
 
         <View style={styles.card}>
@@ -109,10 +111,19 @@ export default function PerfilPacienteScreen({ navigation }: any) {
           <Text style={styles.valor}>{paciente.nombreUsuario}</Text>
 
           <Text style={styles.label}>Correo electrónico:</Text>
-          <Text style={styles.valor}>{paciente.correo}</Text>
+          <Text style={styles.valor}>{paciente.email}</Text>
 
           <Text style={styles.label}>Edad:</Text>
           <Text style={styles.valor}>{paciente.edad} años</Text>
+
+          {promedioCalificaciones !== null ? (
+            <>
+              <Text style={styles.label}>Promedio que has dado a doctores:</Text>
+              <Text style={styles.valor}>{promedioCalificaciones.toFixed(1)} ⭐</Text>
+            </>
+          ) : (
+            <Text style={styles.label}>No has calificado doctores aún.</Text>
+          )}
         </View>
 
         <TouchableOpacity style={styles.boton} onPress={() => navigation.navigate('Guardar Cita')}>
@@ -131,7 +142,6 @@ export default function PerfilPacienteScreen({ navigation }: any) {
   );
 }
 
-
 const styles = StyleSheet.create({
   background: {
     flex: 1,
@@ -141,7 +151,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 24,
     borderRadius: 14,
-    paddingBottom: 20
+    paddingBottom: 20,
+    alignItems: 'center',
   },
   bienvenida: {
     fontSize: 22,
@@ -150,7 +161,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingVertical: 5,
-    marginTop: 40
+    marginTop: 40,
   },
   nombre: {
     fontSize: 28,
@@ -159,39 +170,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
+  imgContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   img: {
     width: 150,
     height: 150,
-    marginVertical: 20,
     borderRadius: 80,
     resizeMode: 'cover',
     borderWidth: 2,
-    borderColor: '#27918bff',
-  alignSelf: 'center', 
-    
+    borderColor: '#1a7c79ff',
   },
   card: {
+    padding: 20,
+    marginBottom: 20,
+    backgroundColor: '#ffffffdd',
     borderRadius: 10,
-    padding: 16,
-    marginBottom: 16,
-    shadowRadius: 2,
-    elevation: 1,
-      borderWidth: 0.5,      
-  borderColor: 'black',
-      backgroundColor: 'rgba(255,255,255,0.7',
+    width: '100%',
+    elevation: 5,
   },
   label: {
     fontSize: 18,
     fontWeight: '600',
     color: '#20504F',
     marginTop: 12,
-    textAlign: "center"
+    textAlign: 'center',
   },
   valor: {
     fontSize: 17,
     color: 'black',
     marginTop: 4,
-    textAlign: "center"
+    textAlign: 'center',
   },
   boton: {
     backgroundColor: '#32a8a4ff',
